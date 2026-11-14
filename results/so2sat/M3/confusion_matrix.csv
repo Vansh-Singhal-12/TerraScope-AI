@@ -1,0 +1,18 @@
+,LCZ1 Compact high-rise,LCZ2 Compact midrise,LCZ3 Compact low-rise,LCZ4 Open high-rise,LCZ5 Open midrise,LCZ6 Open low-rise,LCZ7 Lightweight low-rise,LCZ8 Large low-rise,LCZ9 Sparsely built,LCZ10 Heavy industry,LCZA Dense trees,LCZB Scattered trees,LCZC Bush/scrub,LCZD Low plants,LCZE Bare rock or paved,LCZF Bare soil or sand,LCZG Water
+LCZ1 Compact high-rise,12,7,5,0,2,5,0,17,1,0,0,0,0,2,0,0,0
+LCZ2 Compact midrise,7,95,74,4,0,42,0,27,1,1,0,0,0,0,0,0,0
+LCZ3 Compact low-rise,1,16,271,1,0,114,2,39,7,0,0,0,0,17,0,3,0
+LCZ4 Open high-rise,0,11,19,50,0,43,0,27,7,0,0,0,0,12,0,1,0
+LCZ5 Open midrise,0,9,26,11,0,78,0,16,3,1,0,0,0,7,0,0,0
+LCZ6 Open low-rise,0,26,30,10,1,271,0,11,10,0,2,0,0,19,0,1,0
+LCZ7 Lightweight low-rise,0,0,62,1,0,5,4,4,0,0,0,0,1,16,0,2,0
+LCZ8 Large low-rise,2,5,50,18,0,23,1,527,3,1,0,0,2,41,0,6,0
+LCZ9 Sparsely built,0,5,26,20,0,207,0,22,32,0,2,0,0,59,0,1,9
+LCZ10 Heavy industry,2,6,22,15,1,38,0,64,4,0,0,0,0,18,0,2,0
+LCZA Dense trees,0,0,0,0,0,3,0,0,5,0,238,0,0,15,0,0,197
+LCZB Scattered trees,0,0,0,3,0,16,0,4,3,0,3,0,0,41,0,0,6
+LCZC Bush/scrub,0,0,7,7,0,7,2,12,0,0,1,0,83,106,0,8,7
+LCZD Low plants,0,0,2,1,0,15,0,19,6,0,7,0,17,391,0,16,76
+LCZE Bare rock or paved,0,0,3,0,0,0,1,7,1,0,0,0,0,23,0,5,0
+LCZF Bare soil or sand,0,0,11,4,0,3,1,18,0,0,0,0,27,41,0,28,1
+LCZG Water,0,0,0,0,0,0,0,2,0,1,4,0,0,50,0,0,465
