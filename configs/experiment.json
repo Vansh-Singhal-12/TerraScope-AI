@@ -1,0 +1,57 @@
+{
+  "project": "TerraScope AI",
+  "research_question": "Does pretraining on EuroSAT improve performance on satellite-image classification in a geographically different dataset, and how much additional benefit does fine-tuning provide?",
+  "source_dataset": "EuroSAT",
+  "target_dataset": "So2Sat LCZ42",
+  "source_classes": 10,
+  "target_classes": 17,
+  "architecture": "ResNet-18",
+  "input_size": [
+    32,
+    32
+  ],
+  "seed": 42,
+  "batch_size": 64,
+  "eurosat_split": {
+    "method": "stratified random split",
+    "train_fraction": 0.8,
+    "validation_fraction": 0.2,
+    "random_state": 42
+  },
+  "so2sat_split": {
+    "source_file": "configs/so2sat_split.npz",
+    "training_source": "official validation partition",
+    "internal_validation_fraction": 0.2,
+    "random_state": 42,
+    "held_out_evaluation_source": "official testing partition",
+    "limitation": "Official validation and testing partitions cover the same ten named cities in geographically separated halves; this is not unseen-city generalization."
+  },
+  "sentinel2": {
+    "input_bands_rgb_order": [
+      "B4",
+      "B3",
+      "B2"
+    ],
+    "reflectance_clip": [
+      0.0,
+      2.8
+    ],
+    "scale_divisor": 2.8,
+    "normalization": "ImageNet mean and standard deviation",
+    "normalization_note": "Pragmatic consistent convention; not established as optimal for reflectance data."
+  },
+  "experiments": {
+    "M1": "Random initialization, full fine-tuning",
+    "M2": "ImageNet initialization, frozen backbone",
+    "M3": "EuroSAT-pretrained initialization, frozen backbone",
+    "M4": "EuroSAT-pretrained initialization, full fine-tuning"
+  },
+  "metrics": [
+    "accuracy",
+    "macro_f1",
+    "weighted_f1",
+    "per_class_precision",
+    "per_class_recall",
+    "confusion_matrix"
+  ]
+}

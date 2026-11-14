@@ -1,0 +1,28 @@
+{
+  "input_size": [
+    32,
+    32
+  ],
+  "sentinel2_bands": [
+    "B4",
+    "B3",
+    "B2"
+  ],
+  "reflectance_clip": [
+    0.0,
+    2.8
+  ],
+  "reflectance_scale_divisor": 2.8,
+  "normalization_method": "ImageNet",
+  "mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "normalization_rationale": "Consistent convention aligned with pretrained ResNet input; not asserted to be optimal for Sentinel-2 reflectance."
+}
