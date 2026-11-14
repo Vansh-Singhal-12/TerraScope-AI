@@ -1,149 +1,141 @@
 # TerraScope AI
-
-**Investigating Geographic Transfer Learning in Satellite Image Classification**
+### Satellite Image Classification Through Transfer Learning
 
 ## Overview
 
-TerraScope AI investigates whether pretraining on EuroSAT improves satellite-image classification on the So2Sat LCZ42 dataset, and whether fine-tuning pretrained representations provides additional benefits.
+TerraScope AI is a deep-learning project that classifies satellite imagery into 17 Local Climate Zone (LCZ) categories using Sentinel-2 data.
 
-The project evaluates five ResNet-18 configurations to distinguish the effects of initialization, pretraining history, and target-dataset fine-tuning.
+Beyond developing an accurate image classifier, this project investigates how transfer learning affects satellite-image classification. In particular, we examine whether pretrained visual representations improve classification, whether additional satellite-specific pretraining provides benefits, and how fine-tuning influences transfer performance.
+
+We compare models initialized randomly, pretrained on ImageNet, and pretrained sequentially on ImageNet and EuroSAT before adapting them to So2Sat.
 
 ## Research Question
 
-Does pretraining on EuroSAT improve performance on a geographically different dataset, and how much additional benefit does fine-tuning provide?
+**To what extent does transfer learning improve satellite-image classification, and how does the choice of pretraining pathway influence its effectiveness across geographically distinct datasets?**
+
+### Research Objectives
+
+1. Evaluate the effect of transfer learning compared with training a model from random initialization.
+2. Investigate whether additional satellite-specific pretraining on EuroSAT improves transfer performance over ImageNet initialization alone.
+3. Examine how freezing or fine-tuning pretrained feature extractors affects classification performance.
+4. Evaluate whether these differences persist when models are tested on held-out So2Sat data.
 
 ## Datasets
 
+### ImageNet
+
+ImageNet provides general-purpose visual representations through large-scale natural-image pretraining. We use an ImageNet-pretrained ResNet-18 as one initialization pathway.
+
 ### EuroSAT
-A Sentinel-2 satellite-image dataset containing 10 land-use and land-cover classes. It is used to develop pretrained representations.
+
+EuroSAT is a satellite-image land-cover classification dataset containing 10 classes. We use it for additional domain-specific pretraining after ImageNet initialization.
 
 ### So2Sat LCZ42
-A satellite-image dataset containing Sentinel-1 and Sentinel-2 observations labeled across 17 Local Climate Zone (LCZ) classes. It is used as the target classification task.
 
-The experiments use 32 × 32 RGB inputs derived from Sentinel-2 bands B4, B3, and B2.
+So2Sat is the target dataset. It contains Sentinel-2 satellite imagery associated with 17 Local Climate Zone categories.
+
+- Input: Sentinel-2 imagery
+- Selected bands: B4, B3, B2 (RGB)
+- Input dimensions: 32 × 32 pixels
+- Number of target classes: 17
+
+The official So2Sat validation partition contains 24,119 samples. We divided it into an 80/20 training and validation split:
+
+- Training: 19,295 samples
+- Validation: 4,824 samples
+
+The official testing partition contains 24,188 samples and is reserved for final evaluation.
 
 ## Experimental Design
 
-All five experiments use ResNet-18 and the same So2Sat training and validation split.
+We implemented five ResNet-18 experimental configurations.
 
-| Experiment | Initialization | Target-dataset training |
+| Model | Initialization pathway | So2Sat training |
 |---|---|---|
 | M1 | Random initialization | Full fine-tuning |
-| M2 | ImageNet pretrained | Frozen backbone |
-| M3 | ImageNet → EuroSAT pretrained | Frozen backbone |
-| M4 | ImageNet → EuroSAT pretrained | Full fine-tuning |
-| M5 | ImageNet pretrained | Full fine-tuning |
+| M2 | ImageNet | Frozen backbone |
+| M3 | ImageNet → EuroSAT | Frozen backbone |
+| M4 | ImageNet → EuroSAT | Full fine-tuning |
+| M5 | ImageNet | Full fine-tuning |
 
-The comparisons address different questions:
+The original ImageNet classifier is replaced with a new 17-class LCZ classification head.
 
-- **M2 vs. M3:** Does EuroSAT pretraining change the usefulness of frozen representations relative to ImageNet initialization?
-- **M3 vs. M4:** What is the effect of fine-tuning EuroSAT-pretrained representations?
-- **M4 vs. M5:** How do EuroSAT and ImageNet initialization compare when both models are fully fine-tuned under the same target-dataset protocol?
-- **M2 vs. M5:** What is the effect of fine-tuning an ImageNet-pretrained model?
+### Experimental Comparisons
 
-Comparisons that change more than one experimental factor are interpreted cautiously.
+| Comparison | Purpose |
+|---|---|
+| M1 vs. M4 / M5 | Compare random initialization with pretrained initialization |
+| M2 vs. M3 | Examine the effect of additional EuroSAT pretraining with a frozen backbone |
+| M3 vs. M4 | Examine the effect of fine-tuning after EuroSAT pretraining |
+| M2 vs. M5 | Examine the effect of fine-tuning ImageNet-pretrained features |
+| M4 vs. M5 | Compare the two pretraining pathways under full fine-tuning |
 
-## Data Partitioning
-
-The official So2Sat validation partition contains 24,119 samples. It was internally divided into:
-
-- Training subset: 19,295 samples
-- Validation subset: 4,824 samples
-
-The split was fixed and shared across all five experiments.
-
-The official testing partition, containing 24,188 samples, is reserved for final evaluation. It is not used for model training, checkpoint selection, or hyperparameter adjustment.
-
-The validation and testing partitions cover the same ten cities. Therefore, this study examines cross-dataset transfer and generalization to held-out samples, not generalization to entirely unseen cities.
+M4 versus M5 is the primary comparison for investigating whether additional satellite-specific pretraining provides an advantage when both models are fully adapted to So2Sat.
 
 ## Training Protocol
 
-The So2Sat experiments use a consistent training protocol:
+All So2Sat experiments use the same target training and validation split and a standardized training configuration.
 
 - Architecture: ResNet-18
-- Epochs: 12
+- Input resolution: 32 × 32
 - Batch size: 64
+- Epochs: 12
 - Random seed: 42
 - Optimizer: AdamW
 - Weight decay: 0.0001
 - Backbone learning rate: 0.0001
-- Classification-head learning rate: 0.001
-- Checkpoint selection: lowest validation loss
+- Classification head learning rate: 0.001
+- Learning-rate scheduler: ReduceLROnPlateau
+- Checkpoint selection: Lowest validation loss
+- Mixed precision: Enabled on CUDA
 
-The frozen-backbone experiments train the classification head while keeping the pretrained feature extractor frozen.
+For frozen-backbone experiments, the feature extractor remains frozen while the classification head is trained.
 
 ## Evaluation
 
-The project evaluates:
+We evaluate models using:
 
 - Accuracy
 - Macro-F1
 - Weighted-F1
-- Per-class precision, recall, and F1
+- Per-class precision, recall, and F1-score
 - Confusion matrices
 - Training and validation histories
 
-Macro-F1 is particularly important because the 17 LCZ classes are imbalanced.
+Macro-F1 is particularly important because the 17 LCZ categories are not equally represented.
 
 ## Preliminary Validation Results
 
-The best validation results from each experiment are:
-
-| Experiment | Accuracy | Macro-F1 | Weighted-F1 |
+| Model | Accuracy | Macro-F1 | Weighted-F1 |
 |---|---:|---:|---:|
-| M1 | 68.99% | 0.5950 | 0.6899 |
-| M2 | 59.02% | 0.4346 | 0.5701 |
-| M3 | 51.14% | 0.3292 | 0.4672 |
-| M4 | 92.04% | 0.8935 | 0.9198 |
-| M5 | 92.23% | 0.8945 | 0.9216 |
+| M1 | 68.99% | 59.50% | 68.99% |
+| M2 | 59.02% | 43.46% | 57.01% |
+| M3 | 51.14% | 32.92% | 46.72% |
+| M4 | 92.04% | 89.35% | 91.98% |
+| M5 | 92.23% | 89.45% | 92.16% |
 
-These are validation results, not final test results.
+These are internal validation results, not final test-set results.
 
-M4 and M5 achieved substantially stronger validation performance than the other configurations. Their results were also very close: M5 had slightly higher accuracy and F1 scores, while M4 had slightly lower validation loss.
+### Preliminary Findings
 
-The official testing partition will be used to assess whether these findings hold on unseen samples.
+- Both fully fine-tuned pretrained models achieve over 92% validation accuracy.
+- Fine-tuning substantially improves performance compared with frozen feature extraction.
+- ImageNet initialization outperforms the ImageNet-to-EuroSAT pathway in the frozen-backbone comparison.
+- After full fine-tuning, M4 and M5 achieve nearly identical validation performance.
 
-Detailed experiment outputs are available in `results/so2sat/`.
+The official test evaluation will determine whether these observations persist on held-out samples.
 
-## Technology
+## Geographic Transfer and Limitations
 
-- Python
-- PyTorch
-- torchvision
-- NumPy
-- h5py
-- scikit-learn
-- Matplotlib
+EuroSAT and So2Sat represent different datasets and geographic contexts, allowing us to investigate cross-dataset transfer.
 
-## Repository Structure
+However, the official So2Sat validation and testing partitions cover the same ten cities. Consequently, this experiment does not establish generalization to entirely unseen cities.
 
-- `configs/`: Experiment and preprocessing configurations.
-- `src/data/`: Dataset loading and preprocessing.
-- `src/models/`: Model architecture.
-- `src/training/`: EuroSAT and So2Sat training scripts.
-- `results/`: Experiment histories and validation outputs.
-- `notebooks/`: Exploratory and development notebooks.
+Other limitations include:
 
-## Reproducibility and Storage
+- A single random seed and training/validation split.
+- A limited set of pretraining pathways and model configurations.
+- Class imbalance across the 17 LCZ categories.
+- The use of RGB bands rather than the full Sentinel-2 spectral information.
 
-Source code, configurations, and compact experiment results are maintained in this repository.
-
-Original datasets and model checkpoints are stored separately because of their size. The data files and checkpoint files are not committed to GitHub.
-
-## Project Status
-
-- [x] Dataset exploration and preprocessing
-- [x] EuroSAT pretraining
-- [x] So2Sat experiments M1–M5
-- [x] Validation analysis
-- [ ] Evaluation on the official So2Sat testing partition
-- [ ] Final cross-experiment comparison
-- [ ] Final documentation and presentation
-
-## Limitations
-
-The study uses a single fixed train-validation split and one primary random seed. Results may therefore be sensitive to the particular partition and initialization.
-
-The official validation and testing partitions cover the same ten cities, so the study does not establish generalization to entirely unseen geographic regions or cities.
-
-The class distribution is imbalanced, making accuracy alone insufficient to characterize model performance. Macro-F1 and per-class metrics are reported alongside accuracy.
+These limitations are considered when interpreting the results.
