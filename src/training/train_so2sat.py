@@ -127,6 +127,14 @@ def initialize_experiment(experiment, eurosat_checkpoint, device):
         load_eurosat_backbone(model, eurosat_checkpoint)
         frozen = False
 
+    elif experiment == "M5":
+        # ImageNet-pretrained backbone, fine-tune the entire network.
+        model = build_resnet18(
+            num_classes=NUM_CLASSES,
+            initialization="imagenet",
+        )
+        frozen = False
+
     else:
         raise ValueError(f"Unknown experiment: {experiment}")
 
@@ -659,7 +667,7 @@ def main():
         "--experiment",
         type=str,
         required=True,
-        choices=["M1", "M2", "M3", "M4"],
+        choices=["M1", "M2", "M3", "M4", "M5"],
     )
 
     parser.add_argument(
