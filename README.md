@@ -1,58 +1,81 @@
 # TerraScope AI
-### Satellite Image Classification Through Transfer Learning
+
+## Satellite Image Classification Through Sequential Transfer Learning
 
 ## Overview
 
-TerraScope AI is a deep-learning project that classifies satellite imagery into 17 Local Climate Zone (LCZ) categories using Sentinel-2 data.
+TerraScope AI is a satellite-image classification project that applies sequential transfer learning to identify Local Climate Zones (LCZs). I developed a ResNet-18 model that classifies satellite imagery into 17 categories representing different urban forms and land-cover types.
 
-Beyond developing an accurate image classifier, this project investigates how transfer learning affects satellite-image classification. In particular, we examine whether pretrained visual representations improve classification, whether additional satellite-specific pretraining provides benefits, and how fine-tuning influences transfer performance.
+My approach adapts representations learned from general-purpose image data and satellite-specific imagery to a more specialized classification task. I begin with ImageNet-pretrained weights, further pretrain the model on EuroSAT, and then fine-tune it on So2Sat LCZ42. This process produces M4, my primary demonstration model.
 
-M4, which uses ImageNet-to-EuroSAT pretraining followed by full fine-tuning on So2Sat, serves as TerraScope AI's primary demonstration model.
+Alongside developing the classifier, I investigate how different pretraining pathways and fine-tuning strategies affect performance. I also examine the geographic distribution of training and evaluation samples to better understand the limitations of the model's apparent generalization.
 
-We compare models initialized randomly, pretrained on ImageNet, and pretrained sequentially on ImageNet and EuroSAT before adapting them to So2Sat.
+My longer-term goal is to develop models that can adapt reliably to satellite imagery from geographic regions that were not represented during training.
 
 ## Research Question
 
-**To what extent does transfer learning improve satellite-image classification, and how do pretraining pathways influence classification performance and spatial generalization?**
+To what extent can sequential transfer learning across general-purpose and satellite-specific datasets produce an effective Local Climate Zone classifier, and how do pretraining pathways and fine-tuning strategies influence its performance and geographic generalization?
 
-### Research Objectives
+## Objectives
 
-1. Evaluate the effect of transfer learning compared with training a model from random initialization.
-2. Investigate whether additional satellite-specific pretraining on EuroSAT improves transfer performance over ImageNet initialization alone.
-3. Examine how freezing or fine-tuning pretrained feature extractors affects classification performance.
-4. Evaluate whether these differences persist on held-out So2Sat data and investigate geographic separation within the represented cities.
+- Develop a 17-class Local Climate Zone classifier using Sentinel-2 satellite imagery from So2Sat LCZ42.
+- Apply sequential transfer learning from ImageNet to EuroSAT and then to So2Sat.
+- Compare random initialization, ImageNet initialization, and ImageNet-to-EuroSAT pretraining.
+- Evaluate the effect of freezing the pretrained backbone versus fully fine-tuning the model.
+- Compare model performance using accuracy, macro-F1, weighted-F1, and loss.
+- Examine the geographic distribution of training and evaluation samples to identify potential limitations in generalization.
 
-## Datasets
-
-### ImageNet
-
-ImageNet provides general-purpose visual representations through large-scale natural-image pretraining. We use an ImageNet-pretrained ResNet-18 as one initialization pathway.
-
-### EuroSAT
-
-EuroSAT is a satellite-image land-cover classification dataset containing 10 classes. We use it for additional domain-specific pretraining after ImageNet initialization.
+## Dataset
 
 ### So2Sat LCZ42
 
-So2Sat is the target dataset. It contains Sentinel-2 satellite imagery associated with 17 Local Climate Zone categories.
+The primary dataset is So2Sat LCZ42, which contains Sentinel-2 satellite imagery labeled with 17 Local Climate Zone categories.
 
-- Input: Sentinel-2 imagery
-- Selected bands: B4, B3, B2 (RGB)
-- Input dimensions: 32 × 32 pixels
-- Number of target classes: 17
+Local Climate Zones describe urban and natural environments according to characteristics such as building density, building height, surface cover, and vegetation. The 17 categories include ten built types and seven land-cover types.
 
-We used the 24,119-sample official So2Sat validation partition to construct our training and internal validation subsets through an 80/20 split:
+The dataset provides 32 × 32 satellite-image patches. For this project, I use the first three Sentinel-2 bands in RGB order corresponding to B4, B3, and B2.
 
-- Training: 19,295 samples
-- Internal validation: 4,824 samples
+| Partition | Samples | Purpose |
+|---|---:|---|
+| Official validation partition | 24,119 | Training and internal validation |
+| Training subset | 19,295 | Model training |
+| Internal validation subset | 4,824 | Model selection |
+| Official test partition | 24,188 | Final evaluation |
 
-The official testing partition contains 24,188 samples and is reserved for final evaluation.
+I divided the official validation partition into training and internal validation subsets using an 80/20 split with random seed 42. The separate official test partition was reserved for final evaluation.
 
-## Experimental Design
+### EuroSAT
 
-We implemented five ResNet-18 experimental configurations.
+EuroSAT is used as an intermediate satellite-specific pretraining dataset. It contains satellite images across ten land-use and land-cover classes.
 
-| Model | Initialization pathway | So2Sat training |
+Using EuroSAT allows the model to learn satellite-image representations before being adapted to the more specialized So2Sat LCZ42 classification task.
+
+### ImageNet
+
+ImageNet provides the initial pretrained weights for the ResNet-18 architecture. These weights give the model general visual representations before satellite-specific training begins.
+
+## Model Architecture and Preprocessing
+
+I use ResNet-18, a convolutional neural network architecture, as the base classifier.
+
+I adapted the original architecture for the satellite imagery used in this project:
+
+- The input consists of 32 × 32 RGB satellite-image patches.
+- The initial convolutional layer uses a stride of (1, 1).
+- The original max-pooling layer is removed to preserve spatial information in the relatively small input images.
+- The final fully connected layer is replaced with a 17-class classification head.
+
+### Image preprocessing
+
+The satellite reflectance values are clipped to the range 0–2.8 and divided by 2.8 to scale them to approximately 0–1. The resulting images are then normalized using ImageNet channel means and standard deviations.
+
+This preprocessing is applied consistently during model training and evaluation.
+
+## Transfer-Learning Experiments
+
+I compare five model configurations to investigate the effects of initialization, intermediate satellite-specific pretraining, and fine-tuning.
+
+| Model | Initialization | So2Sat training strategy |
 |---|---|---|
 | M1 | Random initialization | Full fine-tuning |
 | M2 | ImageNet | Frozen backbone |
@@ -60,246 +83,301 @@ We implemented five ResNet-18 experimental configurations.
 | M4 | ImageNet → EuroSAT | Full fine-tuning |
 | M5 | ImageNet | Full fine-tuning |
 
-The original ImageNet classifier is replaced with a new 17-class LCZ classification head.
+M3 and M4 use the same EuroSAT-pretrained checkpoint. Their difference is whether the backbone remains frozen or is fully fine-tuned during So2Sat training.
 
-**Primary Demonstration Model**
+M2 and M5 provide the corresponding comparison for ImageNet initialization.
 
-M4 (ImageNet → EuroSAT → So2Sat, full fine-tuning) serves as the primary demonstration configuration for TerraScope AI. It was selected based on its lowest internal validation loss among the fully fine-tuned models using pretrained initialization. M1–M5 remain part of the comparative experimental study, allowing the project to investigate how initialization pathways and fine-tuning strategies influence classification performance.
+### Primary model: M4
 
-### Experimental Comparisons
+M4 is my primary demonstration model. It follows the sequential transfer-learning pathway:
 
-| Comparison | Purpose |
+**ImageNet → EuroSAT → So2Sat LCZ42**
+
+The model first learns general visual representations from ImageNet, then develops satellite-specific representations through EuroSAT, and finally adapts to the 17-class Local Climate Zone task through full fine-tuning on So2Sat.
+
+I selected M4 as the practical model developed through this pipeline. It achieved the lowest internal validation loss among the fully fine-tuned models initialized with pretrained weights. Its official test performance was also comparable to M5.
+
+The results do not establish that the ImageNet-to-EuroSAT pathway is definitively superior to ImageNet-only initialization. Instead, they demonstrate that sequential transfer learning can produce a strong classifier while highlighting the importance of fine-tuning strategy.
+
+## Training Configuration
+
+The So2Sat experiments use the following training configuration:
+
+| Setting | Value |
 |---|---|
-| M1 vs. M4 / M5 | Compare random initialization with pretrained initialization |
-| M2 vs. M3 | Examine the effect of additional EuroSAT pretraining with a frozen backbone |
-| M3 vs. M4 | Examine the effect of fine-tuning after EuroSAT pretraining |
-| M2 vs. M5 | Examine the effect of fine-tuning ImageNet-pretrained features |
-| M4 vs. M5 | Compare the two pretraining pathways under full fine-tuning |
+| Architecture | ResNet-18 |
+| Number of classes | 17 |
+| Input size | 32 × 32 × 3 |
+| Epochs | 12 |
+| Batch size | 64 |
+| Optimizer | AdamW |
+| Weight decay | 0.0001 |
+| Backbone learning rate | 0.0001 |
+| Classification head learning rate | 0.001 |
+| Learning-rate scheduler | ReduceLROnPlateau |
+| Scheduler factor | 0.5 |
+| Scheduler patience | 2 |
+| Random seed | 42 |
+| Precision | Automatic mixed precision on CUDA |
 
-M4 versus M5 provides a direct comparison of the two pretraining pathways under full fine-tuning, helping investigate the potential contribution of additional satellite-specific pretraining.
+For frozen-backbone experiments, I keep the backbone in evaluation mode to prevent its BatchNorm running statistics from changing during training.
 
-## Training Protocol
+I retain the checkpoint with the lowest internal validation loss for each experiment.
 
-All So2Sat experiments use the same target training and validation split and a standardized training configuration.
+## Results
 
-- Architecture: ResNet-18
-- Input resolution: 32 × 32
-- Batch size: 64
-- Epochs: 12
-- Random seed: 42
-- Optimizer: AdamW
-- Weight decay: 0.0001
-- Backbone learning rate: 0.0001
-- Classification head learning rate: 0.001
-- Learning-rate scheduler: ReduceLROnPlateau
-- Checkpoint selection: Lowest validation loss
-- Mixed precision: Enabled on CUDA
+### Internal validation results
 
-For frozen-backbone experiments, the feature extractor remains frozen while the classification head is trained.
+The following results were obtained on the internal validation subset of 4,824 samples.
 
-## Evaluation
+| Model | Validation loss | Accuracy | Macro-F1 | Weighted-F1 |
+|---|---:|---:|---:|---:|
+| M1 | 1.3304 | 68.99% | 59.50% | 68.99% |
+| M2 | 1.2354 | 59.02% | 43.46% | 57.01% |
+| M3 | 1.4378 | 51.14% | 32.92% | 46.72% |
+| M4 | 0.2959 | 92.04% | 89.35% | 91.98% |
+| M5 | 0.3020 | 92.23% | 89.45% | 92.16% |
 
-We evaluate models using:
+### Official test results
 
-- Accuracy
-- Macro-F1
-- Weighted-F1
-- Per-class precision, recall, and F1-score
-- Confusion matrices
-- Training and validation histories
+The final evaluation uses the separate official test partition containing 24,188 samples.
 
-Macro-F1 is particularly important because the 17 LCZ categories are not equally represented.
+| Model | Test loss | Accuracy | Macro-F1 | Weighted-F1 |
+|---|---:|---:|---:|---:|
+| M1 | 1.9156 | 60.76% | 0.4922 | 0.6024 |
+| M2 | 1.3007 | 57.69% | 0.4276 | 0.5557 |
+| M3 | 1.5030 | 50.01% | 0.3236 | 0.4557 |
+| M4 | 1.2607 | 77.14% | 0.6981 | 0.7658 |
+| M5 | 1.3104 | 76.81% | 0.6995 | 0.7637 |
 
-## Preliminary Validation Results
+### Interpretation
 
-| Model | Accuracy | Macro-F1 | Weighted-F1 |
-|---|---:|---:|---:|
-| M1 | 68.99% | 59.50% | 68.99% |
-| M2 | 59.02% | 43.46% | 57.01% |
-| M3 | 51.14% | 32.92% | 46.72% |
-| M4 | 92.04% | 89.35% | 91.98% |
-| M5 | 92.23% | 89.45% | 92.16% |
+Several findings emerge from the experiments:
 
-These are internal validation results, not final test-set results.
+1. **Full fine-tuning substantially improves performance.**
 
-### Preliminary Findings
+   M3 achieved 50.01% test accuracy with a frozen backbone, while M4 achieved 77.14% after full fine-tuning. Similarly, M5 outperformed M2 by approximately 19.12 percentage points. These comparisons indicate that allowing the pretrained backbone to adapt to the target dataset was important for this task.
 
-- Both fully fine-tuned pretrained models achieve over 92% validation accuracy.
-- Fine-tuning substantially improves performance compared with frozen feature extraction.
-- ImageNet initialization outperforms the ImageNet-to-EuroSAT pathway in the frozen-backbone comparison.
-- After full fine-tuning, M4 and M5 achieve nearly identical validation performance.
+2. **Intermediate EuroSAT pretraining did not produce a clear performance advantage.**
 
-## Geographic Transfer and Limitations
+   M4 and M5 achieved very similar test results. M4 had slightly higher accuracy and weighted-F1, while M5 had slightly higher macro-F1. The differences are small and do not establish a definitive winner between the two initialization pathways.
 
-EuroSAT and So2Sat represent different datasets and image domains, allowing us to investigate cross-dataset transfer through satellite-specific pretraining. This is distinct from the geographic generalization audit, which examines spatial separation between So2Sat partitions.
+3. **Pretraining alone was not sufficient.**
 
-However, the official So2Sat validation and testing partitions cover the same ten cities. Consequently, this experiment does not establish generalization to entirely unseen cities.
+   The frozen-backbone models performed substantially worse than their fully fine-tuned counterparts. This suggests that general-purpose and satellite-specific representations still require adaptation to the target LCZ classification task.
 
-Other limitations include:
+4. **The validation-to-test performance gap requires further investigation.**
 
-- A single random seed and training/validation split.
-- A limited set of pretraining pathways and model configurations.
-- Class imbalance across the 17 LCZ categories.
-- The use of RGB bands rather than the full Sentinel-2 spectral information.
+   M4 achieved 92.04% internal validation accuracy but 77.14% on the official test partition. This difference motivated a separate investigation into the geographic structure of the dataset.
 
-These limitations are considered when interpreting the results.
+## Geographic Generalization Analysis
 
-## Official Test Evaluation
+A central challenge in satellite-image classification is determining whether a model has learned transferable environmental patterns or has benefited from geographic similarities between its training and evaluation samples.
 
-All five experimental configurations were evaluated on the 24,188-sample official So2Sat testing partition. This partition was not used for training, model selection, or hyperparameter tuning.
+To investigate this, I analyzed the geographic coordinates associated with the So2Sat samples.
 
-| Model | Initialization | Test accuracy | Test macro-F1 | Test weighted-F1 |
-|---|---|---:|---:|---:|
-| M1 | Random, full fine-tuning | 60.76% | 49.22% | 60.24% |
-| M2 | ImageNet, frozen backbone | 57.69% | 42.76% | 55.57% |
-| M3 | ImageNet → EuroSAT, frozen backbone | 50.01% | 32.36% | 45.57% |
-| M4 | ImageNet → EuroSAT, full fine-tuning | 77.14% | 69.81% | 76.58% |
-| M5 | ImageNet, full fine-tuning | 76.81% | 69.95% | 76.37% |
+### Dataset composition
 
-M4 and M5 achieved very similar test performance. M4 had slightly higher accuracy and weighted-F1, while M5 had slightly higher macro-F1. These differences are small and do not establish a definitive advantage for either pretraining pathway.
+A chi-square test comparing the class distributions of the internal validation and official test partitions produced:
 
-Fine-tuning substantially improved performance relative to the corresponding frozen-backbone configurations. M4 outperformed M3 by 27.13 percentage points in test accuracy, while M5 outperformed M2 by 19.12 percentage points.
+- Chi-square statistic: 14.396
+- Degrees of freedom: 16
+- p-value: 0.5692
 
-The EuroSAT checkpoints used for M3 and M4 were initialized with ImageNet-pretrained weights before EuroSAT pretraining. Their complete pretraining pathway is therefore ImageNet → EuroSAT → So2Sat.
+This analysis did not detect a statistically significant difference in class composition between the two partitions.
 
-## Geographic Generalization
+I also examined the geographic distribution. Both partitions contain samples from the same ten cities, with each city contributing approximately 10% of the samples.
 
-The internal validation split achieved substantially higher performance than the official test partition for the fully fine-tuned models:
+### Geographic distance
 
-- M4: 92.04% validation accuracy versus 77.14% test accuracy.
-- M5: 92.23% validation accuracy versus 76.81% test accuracy.
+I calculated the distance from each evaluation sample's center to its nearest training-sample center.
 
-A spatial audit found that 97.70% of internal-validation patches intersected at least one training-patch footprint, compared with 8.28% of official-test patches. Median distance to the nearest training-patch center was 100 m for internal validation and 2,342.01 m for the official test partition.
+| Measurement | Internal validation | Official test |
+|---|---:|---:|
+| Median nearest-center distance | 100 m | 2,342 m |
+| Mean nearest-center distance | 146.32 m | 3,585.98 m |
+| 90th percentile | 223.61 m | 8,224.17 m |
 
-These findings indicate substantially greater spatial association between training and internal-validation samples. Spatial dependence may contribute to the validation-to-test performance gap, although the analysis does not establish causation.
+Each image patch covers approximately 320 m × 320 m, based on its 32 × 32 pixels at 10 m per pixel.
 
-Both official partitions contain samples from the same ten cities. Consequently, this experiment evaluates geographic separation within represented cities, not generalization to entirely unseen cities.
+I also examined whether the geographic footprints of evaluation patches intersected the footprints of training patches.
 
-The full analysis, methodology, additional metrics, and limitations are documented in [`docs/generalization_analysis.md`](docs/generalization_analysis.md).
+| Partition | Patches with positive-area footprint intersection |
+|---|---:|
+| Internal validation | 4,713 / 4,824 (97.70%) |
+| Official test | 2,002 / 24,188 (8.28%) |
 
-## Reproducibility and Setup
+### Interpretation and limitations
 
-### Environment
+The internal validation samples were geographically much closer to the training samples than the official test samples. The difference in geographic proximity, alongside the validation-to-test performance gap, suggests that spatial dependence may contribute to the difference in model performance.
 
-The experiments were developed in Google Colab using the following environment:
+However, this analysis does not establish geographic overlap as the cause of the performance gap. A positive-area footprint intersection also does not prove that two patches contain identical pixels.
 
-| Package | Version |
-|---|---|
-| Python | 3.13.16 |
-| PyTorch | 2.14.1 |
-| Torchvision | 0.29.1 |
-| NumPy | 2.4.6 |
-| scikit-learn | 1.6.1 |
-| h5py | 3.14.0 |
-| pandas | 2.2.3 |
-| Matplotlib | 3.10.0 |
-| SciPy | 1.16.3 |
-| tqdm | 4.67.3 |
-| Pillow | 11.3.0 |
+Most importantly, both the internal validation and official test partitions contain samples from the same ten cities. Therefore, the official test results do not demonstrate generalization to entirely unseen cities or geographic regions.
 
-The recorded PyTorch environment used CUDA 13.0 builds. GPU availability depends on the installed PyTorch build and hardware.
+The spatial analysis identifies an important limitation and motivates a more rigorous future evaluation using geographically separated training and testing regions.
 
-### Installation
+For the complete analysis, see docs/generalization_analysis.md.
 
-Clone the repository and install its dependencies:
+## Conclusion
+
+TerraScope AI demonstrates an applied transfer-learning pipeline for Local Climate Zone classification using satellite imagery.
+
+By adapting ResNet-18 from ImageNet to EuroSAT and then to So2Sat LCZ42, I developed M4, a 17-class classifier that achieved 77.14% accuracy on the official test partition. Comparisons across five configurations show that full fine-tuning was important to performance, while the additional benefit of EuroSAT pretraining over ImageNet-only initialization remains inconclusive.
+
+My geographic analysis also revealed a substantial difference in the spatial proximity of internal validation and official test samples. This finding highlights why strong performance on a conventional held-out partition should not automatically be interpreted as geographic generalization.
+
+This project establishes a foundation for further work on adapting satellite-image classifiers across datasets and geographic regions.
+
+## Future Work
+
+Future development will focus on:
+
+- **Unseen-region evaluation:** Train on selected cities and test on entirely different cities to directly measure geographic generalization.
+- **Repeated experiments:** Run multiple random seeds to determine whether the observed performance differences are consistent.
+- **Class-level analysis:** Investigate confusion patterns and improve performance on underrepresented LCZ categories.
+- **Transfer-learning optimization:** Explore alternative pretraining strategies, fine-tuning schedules, and model architectures.
+- **Regional adaptation:** Investigate how the model can be adapted to satellite imagery from new geographic areas with limited labeled data.
+
+## Repository Structure
+
+```text
+TerraScope-AI/
+├── configs/
+│   ├── experiment.json
+│   └── so2sat_split.npz
+├── data/
+│   └── raw/
+│       ├── validation.h5
+│       └── testing.h5
+├── docs/
+│   └── generalization_analysis.md
+├── results/
+│   └── so2sat/
+├── src/
+│   ├── analysis/
+│   ├── evaluation/
+│   ├── models/
+│   ├── preprocessing/
+│   └── training/
+├── checkpoints/
+├── requirements.txt
+└── README.md
+```
+
+Raw datasets and model checkpoints are not included in the Git repository. They must be obtained separately.
+
+## Reproducibility
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Vansh-Singhal-12/TerraScope-AI.git
 cd TerraScope-AI
+```
+
+### 2. Install dependencies
+
+The project dependencies and versions are listed in requirements.txt.
+
+```bash
 pip install -r requirements.txt
 ```
 
-For GPU training, install a compatible PyTorch and Torchvision build using the [official PyTorch installation selector](https://pytorch.org/get-started/locally/).
+The experiments were developed using PyTorch with CUDA acceleration in Google Colab.
 
-### Dataset Setup
+### 3. Prepare the datasets
 
-The datasets are not included in the repository and must be obtained separately.
-
-Place the So2Sat files in `data/raw/`:
+Place the So2Sat files in the following locations:
 
 ```text
-data/
-└── raw/
-    ├── validation.h5
-    └── testing.h5
+data/raw/validation.h5
+data/raw/testing.h5
 ```
 
-The saved So2Sat split indices belong in:
+The project uses the official validation and testing partitions. The internal training/validation split is stored in:
 
 ```text
 configs/so2sat_split.npz
 ```
 
-EuroSAT must also be downloaded separately and made available locally. Configure its dataset directory according to the path expected by `src/training/train_eurosat.py`.
+The EuroSAT dataset must also be made available for intermediate pretraining.
 
-### Training
+### 4. Train the EuroSAT model
 
-Run commands from the repository root.
-
-First, train the EuroSAT model:
+The EuroSAT training script produces the checkpoint used by the sequential transfer-learning experiments.
 
 ```bash
-python -m src.training.train_eurosat
+python -m src.training.train_eurosat \
+    --data-root ./data \
+    --checkpoint-dir ./checkpoints \
+    --epochs 12 \
+    --batch-size 64 \
+    --seed 42
 ```
 
-Then train the So2Sat configurations:
+The resulting checkpoint is:
 
-**M1: Random initialization, full fine-tuning**
+```text
+checkpoints/eurosat_resnet18_best.pth
+```
+
+### 5. Train the So2Sat models
+
+The So2Sat training script is located at:
+
+```text
+src/training/train_so2sat.py
+```
+
+It supports the five experimental configurations described above. M3 and M4 require the EuroSAT-pretrained checkpoint.
+
+To view the available command-line arguments:
 
 ```bash
-python -m src.training.train_so2sat --experiment M1 --validation-h5 data/raw/validation.h5 --split-path configs/so2sat_split.npz --output-dir checkpoints/M1
+python -m src.training.train_so2sat --help
 ```
 
-**M2: ImageNet initialization, frozen backbone**
+The experiment outputs are organized under:
+
+```text
+results/so2sat/
+```
+
+### 6. Evaluate the models
+
+After training, the models can be evaluated on the official test partition:
 
 ```bash
-python -m src.training.train_so2sat --experiment M2 --validation-h5 data/raw/validation.h5 --split-path configs/so2sat_split.npz --output-dir checkpoints/M2
+python -m src.evaluation.evaluate_so2sat \
+    --test-h5 data/raw/testing.h5 \
+    --checkpoint-root results/so2sat \
+    --output-root results/so2sat \
+    --experiments M1 M2 M3 M4 M5 \
+    --batch-size 64
 ```
 
-**M3: ImageNet → EuroSAT, frozen backbone**
+The evaluation script produces the metrics and outputs used in the results section.
 
-```bash
-python -m src.training.train_so2sat --experiment M3 --validation-h5 data/raw/validation.h5 --split-path configs/so2sat_split.npz --eurosat-checkpoint checkpoints/eurosat/best_checkpoint.pth --output-dir checkpoints/M3
-```
+## Sources and Acknowledgments
 
-**M4: ImageNet → EuroSAT, full fine-tuning**
+### Datasets and pretrained models
 
-```bash
-python -m src.training.train_so2sat --experiment M4 --validation-h5 data/raw/validation.h5 --split-path configs/so2sat_split.npz --eurosat-checkpoint checkpoints/eurosat/best_checkpoint.pth --output-dir checkpoints/M4
-```
+- **So2Sat LCZ42:** Dataset used for 17-class Local Climate Zone classification.
+- **EuroSAT:** Satellite-image dataset used for intermediate pretraining.
+- **ImageNet:** Source of the initial pretrained ResNet-18 weights.
+- **ResNet:** He et al., Deep Residual Learning for Image Recognition (2015).
 
-**M5: ImageNet initialization, full fine-tuning**
+### Software and tools
 
-```bash
-python -m src.training.train_so2sat --experiment M5 --validation-h5 data/raw/validation.h5 --split-path configs/so2sat_split.npz --output-dir checkpoints/M5
-```
+- **PyTorch:** Model implementation and training.
+- **Torchvision:** ResNet-18 architecture and pretrained weights.
+- **NumPy:** Numerical processing.
+- **h5py:** HDF5 dataset access.
+- **scikit-learn:** Classification metrics and evaluation.
+- **SciPy:** Statistical analysis.
+- **Matplotlib:** Data visualization.
+- **Google Colab:** Development and GPU-assisted experimentation.
+- **GitHub:** Version control and project hosting.
 
-The scripts support additional arguments for epochs, batch size, and random seed.
-
-### Evaluation
-
-Evaluate the saved checkpoints on the official testing partition:
-
-```bash
-python -m src.evaluation.evaluate_so2sat --test-h5 data/raw/testing.h5 --checkpoint-root checkpoints --output-root results/so2sat
-```
-
-The evaluation script generates comparative metrics, classification reports, confusion matrices, and prediction files.
-
-The official testing partition must remain separate from training, hyperparameter tuning, and checkpoint selection.
-
-### Checkpoints and Results
-
-Each experiment saves its best checkpoint, selected using internal validation loss, along with training history and evaluation outputs.
-
-The EuroSAT checkpoint is required for M3 and M4. M1, M2, and M5 do not require it.
-
-Large model checkpoints and raw datasets should not be committed directly to Git. If distributed, checkpoints should be provided through GitHub Releases or another file-hosting service.
-
-### Reproducibility Considerations
-
-The reported experiments use random seed 42 and one training/validation split. Each configuration was evaluated using one training run. Consequently, the reported differences are descriptive and do not establish statistical significance across independent training runs.
-
-Re-running experiments may produce small differences due to hardware, library versions, and nondeterministic GPU operations.
-
-Reproducing the exact reported metrics requires the original checkpoints and corresponding dataset partitions.
+I acknowledge the original creators of all datasets, pretrained weights, libraries, and external resources used in this project. Their sources should be cited in the project documentation.
