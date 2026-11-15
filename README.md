@@ -7,6 +7,8 @@ TerraScope AI is a deep-learning project that classifies satellite imagery into 
 
 Beyond developing an accurate image classifier, this project investigates how transfer learning affects satellite-image classification. In particular, we examine whether pretrained visual representations improve classification, whether additional satellite-specific pretraining provides benefits, and how fine-tuning influences transfer performance.
 
+M4, which uses ImageNet-to-EuroSAT pretraining followed by full fine-tuning on So2Sat, serves as TerraScope AI's primary demonstration model.
+
 We compare models initialized randomly, pretrained on ImageNet, and pretrained sequentially on ImageNet and EuroSAT before adapting them to So2Sat.
 
 ## Research Question
@@ -39,10 +41,10 @@ So2Sat is the target dataset. It contains Sentinel-2 satellite imagery associate
 - Input dimensions: 32 × 32 pixels
 - Number of target classes: 17
 
-The official So2Sat validation partition contains 24,119 samples. We divided it into an 80/20 training and validation split:
+We used the 24,119-sample official So2Sat validation partition to construct our training and internal validation subsets through an 80/20 split:
 
 - Training: 19,295 samples
-- Validation: 4,824 samples
+- Internal validation: 4,824 samples
 
 The official testing partition contains 24,188 samples and is reserved for final evaluation.
 
@@ -60,6 +62,10 @@ We implemented five ResNet-18 experimental configurations.
 
 The original ImageNet classifier is replaced with a new 17-class LCZ classification head.
 
+**Primary Demonstration Model**
+
+M4 (ImageNet → EuroSAT → So2Sat, full fine-tuning) serves as the primary demonstration configuration for TerraScope AI. It was selected based on its lowest internal validation loss among the fully fine-tuned models using pretrained initialization. M1–M5 remain part of the comparative experimental study, allowing the project to investigate how initialization pathways and fine-tuning strategies influence classification performance.
+
 ### Experimental Comparisons
 
 | Comparison | Purpose |
@@ -70,7 +76,7 @@ The original ImageNet classifier is replaced with a new 17-class LCZ classificat
 | M2 vs. M5 | Examine the effect of fine-tuning ImageNet-pretrained features |
 | M4 vs. M5 | Compare the two pretraining pathways under full fine-tuning |
 
-M4 versus M5 is the key comparison for investigating whether additional satellite-specific pretraining provides an advantage when both models are fully adapted to So2Sat.
+M4 versus M5 provides a direct comparison of the two pretraining pathways under full fine-tuning, helping investigate the potential contribution of additional satellite-specific pretraining.
 
 ## Training Protocol
 
@@ -123,7 +129,6 @@ These are internal validation results, not final test-set results.
 - ImageNet initialization outperforms the ImageNet-to-EuroSAT pathway in the frozen-backbone comparison.
 - After full fine-tuning, M4 and M5 achieve nearly identical validation performance.
 
-
 ## Geographic Transfer and Limitations
 
 EuroSAT and So2Sat represent different datasets and image domains, allowing us to investigate cross-dataset transfer through satellite-specific pretraining. This is distinct from the geographic generalization audit, which examines spatial separation between So2Sat partitions.
@@ -139,12 +144,9 @@ Other limitations include:
 
 These limitations are considered when interpreting the results.
 
-
 ## Official Test Evaluation
 
-All five experimental configurations were evaluated on the 24,188-sample
-official So2Sat testing partition. This partition was not used for model
-selection.
+All five experimental configurations were evaluated on the 24,188-sample official So2Sat testing partition. This partition was not used for training, model selection, or hyperparameter tuning.
 
 | Model | Initialization | Test accuracy | Test macro-F1 | Test weighted-F1 |
 |---|---|---:|---:|---:|
@@ -154,45 +156,26 @@ selection.
 | M4 | ImageNet → EuroSAT, full fine-tuning | 77.14% | 69.81% | 76.58% |
 | M5 | ImageNet, full fine-tuning | 76.81% | 69.95% | 76.37% |
 
-M4 and M5 achieved very similar test performance. M4 had slightly higher
-accuracy and weighted-F1, while M5 had slightly higher macro-F1. These
-differences are small and do not establish a definitive advantage for
-either pretraining pathway.
+M4 and M5 achieved very similar test performance. M4 had slightly higher accuracy and weighted-F1, while M5 had slightly higher macro-F1. These differences are small and do not establish a definitive advantage for either pretraining pathway.
 
-Fine-tuning substantially improved performance relative to the
-corresponding frozen-backbone configurations. M4 outperformed M3 by
-27.13 percentage points in test accuracy, while M5 outperformed M2 by
-19.12 percentage points.
+Fine-tuning substantially improved performance relative to the corresponding frozen-backbone configurations. M4 outperformed M3 by 27.13 percentage points in test accuracy, while M5 outperformed M2 by 19.12 percentage points.
 
-The EuroSAT checkpoints used for M3 and M4 were initialized
-with ImageNet-pretrained weights before EuroSAT pretraining. Their complete
-pretraining pathway is therefore ImageNet → EuroSAT → So2Sat.
+The EuroSAT checkpoints used for M3 and M4 were initialized with ImageNet-pretrained weights before EuroSAT pretraining. Their complete pretraining pathway is therefore ImageNet → EuroSAT → So2Sat.
 
 ## Geographic Generalization
 
-The internal validation split achieved substantially higher performance
-than the official test partition for the fully fine-tuned models:
+The internal validation split achieved substantially higher performance than the official test partition for the fully fine-tuned models:
 
 - M4: 92.04% validation accuracy versus 77.14% test accuracy.
 - M5: 92.23% validation accuracy versus 76.81% test accuracy.
 
-A spatial audit found that 97.70% of internal-validation patches intersected
-at least one training-patch footprint, compared with 8.28% of official-test
-patches. Median distance to the nearest training-patch center was 100 m
-for internal validation and 2,342.01 m for the official test partition.
+A spatial audit found that 97.70% of internal-validation patches intersected at least one training-patch footprint, compared with 8.28% of official-test patches. Median distance to the nearest training-patch center was 100 m for internal validation and 2,342.01 m for the official test partition.
 
-These findings indicate substantially greater spatial association between
-training and internal-validation samples. Spatial dependence may contribute
-to the validation-to-test performance gap, although the analysis does not
-establish causation.
+These findings indicate substantially greater spatial association between training and internal-validation samples. Spatial dependence may contribute to the validation-to-test performance gap, although the analysis does not establish causation.
 
-Both official partitions contain samples from the same ten cities.
-Consequently, this experiment evaluates geographic separation within
-represented cities, not generalization to entirely unseen cities.
+Both official partitions contain samples from the same ten cities. Consequently, this experiment evaluates geographic separation within represented cities, not generalization to entirely unseen cities.
 
-The full analysis, methodology, additional metrics, and limitations are
-documented in [`docs/generalization_analysis.md`](docs/generalization_analysis.md).
-
+The full analysis, methodology, additional metrics, and limitations are documented in [`docs/generalization_analysis.md`](docs/generalization_analysis.md).
 
 ## Reproducibility and Setup
 
@@ -230,7 +213,9 @@ For GPU training, install a compatible PyTorch and Torchvision build using the [
 
 ### Dataset Setup
 
-The datasets are not included in the repository. Place the So2Sat files in `data/raw/`:
+The datasets are not included in the repository and must be obtained separately.
+
+Place the So2Sat files in `data/raw/`:
 
 ```text
 data/
@@ -245,7 +230,7 @@ The saved So2Sat split indices belong in:
 configs/so2sat_split.npz
 ```
 
-EuroSAT must also be available locally. Configure its dataset directory according to the path expected by `src/training/train_eurosat.py`.
+EuroSAT must also be downloaded separately and made available locally. Configure its dataset directory according to the path expected by `src/training/train_eurosat.py`.
 
 ### Training
 
@@ -313,6 +298,8 @@ Large model checkpoints and raw datasets should not be committed directly to Git
 
 ### Reproducibility Considerations
 
-The reported experiments use random seed 42 and one training/validation split. Re-running experiments may produce small differences due to hardware, library versions, and nondeterministic GPU operations.
+The reported experiments use random seed 42 and one training/validation split. Each configuration was evaluated using one training run. Consequently, the reported differences are descriptive and do not establish statistical significance across independent training runs.
+
+Re-running experiments may produce small differences due to hardware, library versions, and nondeterministic GPU operations.
 
 Reproducing the exact reported metrics requires the original checkpoints and corresponding dataset partitions.
