@@ -1,0 +1,3 @@
+Partition,Samples,Samples with overlap,Overlap percentage
+Internal validation,4824,4713,97.69900497512438
+Official test,24188,2002,8.276831486687614

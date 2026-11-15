@@ -1,7 +1,6 @@
 {
   "project": "TerraScope AI",
-  "research_question": "Does pretraining on EuroSAT improve performance on satellite-image classification in a geographically different dataset, and how much additional benefit does fine-tuning provide?",
-  "source_dataset": "EuroSAT",
+  "research_question": "To what extent does transfer learning improve satellite-image classification, and how do pretraining pathways influence classification performance and spatial generalization?",
   "target_dataset": "So2Sat LCZ42",
   "source_classes": 10,
   "target_classes": 17,
@@ -43,8 +42,9 @@
   "experiments": {
     "M1": "Random initialization, full fine-tuning",
     "M2": "ImageNet initialization, frozen backbone",
-    "M3": "EuroSAT-pretrained initialization, frozen backbone",
-    "M4": "EuroSAT-pretrained initialization, full fine-tuning"
+    "M3": "ImageNet \u2192 EuroSAT pretraining, frozen backbone during So2Sat training",
+    "M4": "ImageNet \u2192 EuroSAT pretraining, full fine-tuning during So2Sat training",
+    "M5": "ImageNet initialization, full fine-tuning"
   },
   "metrics": [
     "accuracy",
@@ -53,5 +53,48 @@
     "per_class_precision",
     "per_class_recall",
     "confusion_matrix"
+  ],
+  "pretraining_provenance": {
+    "M3": "ResNet-18 initialized with ImageNet-pretrained weights, then pretrained on EuroSAT; transferred to So2Sat with the backbone frozen.",
+    "M4": "ResNet-18 initialized with ImageNet-pretrained weights, then pretrained on EuroSAT; transferred to So2Sat with full fine-tuning."
+  },
+  "evaluation": {
+    "official_test_samples": 24188,
+    "official_test_source": "So2Sat official testing partition",
+    "test_used_for_model_selection": false,
+    "metrics": [
+      "accuracy",
+      "macro_f1",
+      "weighted_f1",
+      "per_class_precision",
+      "per_class_recall",
+      "confusion_matrix"
+    ]
+  },
+  "spatial_generalization_audit": {
+    "internal_validation_samples": 4824,
+    "official_test_samples": 24188,
+    "median_nearest_training_distance_m": {
+      "internal_validation": 100.0,
+      "official_test": 2342.01
+    },
+    "training_footprint_overlap_percent": {
+      "internal_validation": 97.699,
+      "official_test": 8.277
+    },
+    "patch_dimensions_pixels": [
+      32,
+      32
+    ],
+    "pixel_resolution_m": 10,
+    "patch_footprint_m": [
+      320,
+      320
+    ],
+    "interpretation": "Internal validation samples are substantially more spatially associated with training samples than official test samples. Spatial dependence may contribute to the validation-to-test performance gap; this analysis does not establish causation."
+  },
+  "pretraining_datasets": [
+    "ImageNet",
+    "EuroSAT"
   ]
 }

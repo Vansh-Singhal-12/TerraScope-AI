@@ -68,12 +68,24 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
-    train_loader, val_loader, _, _ = create_eurosat_loaders(
-        root=args.data_root,
-        batch_size=args.batch_size,
-        random_state=args.seed,
-        num_workers=args.num_workers,
+    train_loader, val_loader, train_indices, val_indices = (
+        create_eurosat_loaders(
+            root=args.data_root,
+            batch_size=args.batch_size,
+            random_state=args.seed,
+            num_workers=args.num_workers,
+        )
     )
+
+    # Preserve the exact stratified split used for EuroSAT pretraining.
+    split_path = os.path.join(args.checkpoint_dir, "eurosat_split.npz")
+    np.savez_compressed(
+        split_path,
+        train_indices=train_indices,
+        val_indices=val_indices,
+        random_state=np.array(args.seed),
+    )
+    print(f"Saved EuroSAT split indices to {split_path}")
 
     model = build_resnet18(
         num_classes=10,

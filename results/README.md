@@ -117,3 +117,78 @@ The official test partition is reserved for final evaluation and is not used for
 - [ ] Official test-set evaluation
 - [ ] Final comparative analysis
 - [ ] Final figures and visualizations
+
+
+## Official Test Results
+
+The five models were evaluated on the official So2Sat testing partition,
+containing 24,188 samples. The test partition was held out from model
+selection.
+
+| Model | Test loss | Accuracy | Macro-F1 | Weighted-F1 |
+|---|---:|---:|---:|---:|
+| M1 | 1.9156 | 60.76% | 49.22% | 60.24% |
+| M2 | 1.3007 | 57.69% | 42.76% | 55.57% |
+| M3 | 1.5030 | 50.01% | 32.36% | 45.57% |
+| M4 | 1.2607 | 77.14% | 69.81% | 76.58% |
+| M5 | 1.3104 | 76.81% | 69.95% | 76.37% |
+
+### Per-model files
+
+Each `results/so2sat/Mn/` directory contains:
+
+- `test_metrics.json`: aggregate official test metrics
+- `test_classification_report.csv`: per-class precision, recall, and F1
+- `test_confusion_matrix.csv`: confusion matrix
+- `test_predictions.npz`: saved test predictions and associated arrays
+
+The combined comparison is stored in:
+
+- `official_test_comparison.csv`
+
+## Geographic Distribution Audit
+
+The `results/so2sat/distribution_audit/` directory contains the outputs
+of the geographic-generalization investigation.
+
+Important files include:
+
+| File | Contents |
+|---|---|
+| `class_distribution.csv` | Internal-validation and test class distributions |
+| `city_distribution.csv` | City representation across partitions |
+| `class_by_city_difference.csv` | Class-composition differences by city |
+| `validation_vs_test_per_city.csv` | Per-city validation and test comparison |
+| `per_city_test_metrics.csv` | Per-city test metrics |
+| `per_city_test_metrics_corrected.csv` | Corrected per-city test metrics |
+| `nearest_training_distance_summary.csv` | Summary of distances to nearest training samples |
+| `nearest_training_distances.csv` | Individual nearest-training-sample distances |
+| `training_footprint_overlap_overall.csv` | Overall training-footprint overlap |
+| `training_footprint_overlap_by_city.csv` | Footprint overlap broken down by city |
+| `spatial_distribution_by_city.png` | Spatial distribution visualization |
+
+### Main spatial findings
+
+| Measurement | Internal validation | Official test |
+|---|---:|---:|
+| Samples | 4,824 | 24,188 |
+| Median nearest-training-center distance | 100.00 m | 2,342.01 m |
+| Samples intersecting training footprints | 97.70% | 8.28% |
+
+Footprint intersection indicates geographic overlap between patch
+rectangles. It does not establish identical pixels or prove that spatial
+overlap caused the performance difference.
+
+The full methodology, interpretation, and limitations are documented in
+[`docs/generalization_analysis.md`](../docs/generalization_analysis.md).
+
+## Interpretation Notes
+
+- M4 and M5 have nearly identical official test performance; the small
+  metric differences do not establish a definitive pretraining-pathway winner.
+- The internal validation split is a random sample-level split and exhibits
+  substantial spatial association with training samples.
+- The official test partition is geographically more separated, but still
+  represents the same ten cities as the training data.
+- The EuroSAT checkpoints used for M3 and M4 were initialized with
+  ImageNet-pretrained weights before EuroSAT pretraining.

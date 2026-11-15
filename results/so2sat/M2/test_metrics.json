@@ -1,0 +1,9 @@
+{
+    "experiment": "M2",
+    "checkpoint_epoch": 12,
+    "test_samples": 24188,
+    "test_loss": 1.3006852163999598,
+    "test_accuracy": 0.576856292376385,
+    "test_macro_f1": 0.4276355535792333,
+    "test_weighted_f1": 0.5557402740130252
+}

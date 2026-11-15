@@ -9,13 +9,6 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 SENTINEL2_RGB_BANDS = ("B4", "B3", "B2")
 
 
-def preprocess_eurosat(image):
-    """EuroSAT PIL images are resized and normalized in the dataset transform."""
-    raise NotImplementedError(
-        "Use the EuroSAT transform defined in src/data/eurosat.py."
-    )
-
-
 def preprocess_sentinel2_rgb(
     image: np.ndarray,
     reflectance_max: float = 2.8,

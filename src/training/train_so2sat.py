@@ -685,7 +685,8 @@ def main():
     parser.add_argument(
         "--eurosat-checkpoint",
         type=str,
-        required=True,
+        default=None,
+        help="Required only for M3 and M4.",
     )
 
     parser.add_argument(
@@ -713,6 +714,17 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.experiment in ("M3", "M4"):
+        if not args.eurosat_checkpoint:
+            parser.error(
+                f"--eurosat-checkpoint is required for {args.experiment}."
+            )
+
+        if not Path(args.eurosat_checkpoint).is_file():
+            parser.error(
+                f"EuroSAT checkpoint not found: {args.eurosat_checkpoint}"
+            )
 
     train_experiment(args)
 
